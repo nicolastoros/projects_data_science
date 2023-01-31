@@ -42,7 +42,6 @@ messages, errors = decoder.read(mesg_listener = mesg_listener)
 
 if len(errors) > 0:
     print(f"Something went wrong decoding the file: {errors}")
-    return
 
 print(record_fields)
 
