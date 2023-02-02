@@ -8,7 +8,15 @@ from sklearn.decomposition import PCA, FastICA, NMF
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+from sklearn.linear_model import LinearRegression, Lasso, Ridge, ElasticNet
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, StackingRegressor
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import KFold
+from sklearn.metrics import mean_squared_error
 
+#Clases utiles
+
+#Modelos No Supervisados
 class ClusteringModels_v1:
     def __init__(self, X, model_type=None, n_clusters=None):
         self.X = X
@@ -97,6 +105,78 @@ class DimensionalityReductionModels:
         self.reduced_X = self.model.fit_transform(self.X)
         return self.reduced_X
 
+#Modelos Supervisados
+class OptimalTrainTestSplit:
+    def __init__(self, model, X, y, n_splits=5, random_state=0):
+        self.model = model
+        self.X = X
+        self.y = y
+        self.n_splits = n_splits
+        self.random_state = random_state
+
+    def find_optimal_split(self):
+        kf = KFold(n_splits=self.n_splits, random_state=self.random_state)
+        best_split = (None, np.inf)
+        for train_index, test_index in kf.split(self.X):
+            X_train, X_test = self.X[train_index], self.X[test_index]
+            y_train, y_test = self.y[train_index], self.y[test_index]
+            self.model.fit(X_train, y_train)
+            y_pred = self.model.predict(X_test)
+            mse = mean_squared_error(y_test, y_pred)
+            if mse < best_split[1]:
+                best_split = (train_index, test_index, mse)
+        return best_split
+class RegressionModels:
+
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
+        self.models = [
+            LinearRegression(),
+            Lasso(),
+            Ridge(),
+            ElasticNet(),
+            RandomForestRegressor(),
+            GradientBoostingRegressor()
+        ]
+
+    def train_test_split(self, test_size=0.2):
+        X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=test_size)
+        return X_train, X_test, y_train, y_test
+
+    def evaluate_models(self, X_train, X_test, y_train, y_test):
+        results = []
+        for model in self.models:
+            model.fit(X_train, y_train)
+            score = model.score(X_test, y_test)
+            results.append((model, score))
+        return results
+
+    def select_best_model(self, results):
+        best_score = -np.inf
+        best_model = None
+        for model, score in results:
+            if score > best_score:
+                best_score = score
+                best_model = model
+        return best_model
+
+    def stacked_regression(self, X_train, X_test, y_train, y_test):
+        estimators = [
+            ('lr', LinearRegression()),
+            ('lasso', Lasso()),
+            ('ridge', Ridge()),
+            ('en', ElasticNet()),
+            ('rf', RandomForestRegressor()),
+            ('gb', GradientBoostingRegressor())
+        ]
+        stacked_regressor = StackingRegressor(
+            estimators=estimators,
+            final_estimator=LinearRegression()
+        )
+        stacked_regressor.fit(X_train, y_train)
+        score = stacked_regressor.score(X_test, y_test)
+        return stacked_regressor, score
 
 
 import numpy as np
@@ -149,3 +229,31 @@ dr_model = DimensionalityReductionModels(X)
 
 # Escoger el modelo y hacer la reducción de dimensionalidad
 reduced_X = dr_model.fit('t-SNE')
+
+
+
+
+
+
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+# Generamos datos de prueba
+X = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
+y = np.array([1, 2, 3, 4])
+
+# Instanciamos el modelo y la clase
+model = LinearRegression()
+split = OptimalTrainTestSplit(model, X, y)
+
+# Encontramos el split óptimo
+train_index, test_index, mse = split.find_optimal_split()
+
+
+
+
+
+
+
+
+
